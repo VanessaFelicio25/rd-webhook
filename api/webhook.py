@@ -2,6 +2,7 @@ import json
 import os
 import re
 import sys
+import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler
 
@@ -43,13 +44,10 @@ def process_names(first_name: str, last_name: str):
 
 
 def extract_contact(body) -> dict:
-    # Body pode chegar como lista: [{"leads": [{...}]}]
     if isinstance(body, list) and body:
         body = body[0]
-    # Formato {"leads": [{...}]} — RD automações
     if "leads" in body and body["leads"]:
         return body["leads"][0]
-    # Formato {"payload": {...}}
     if "payload" in body:
         return body["payload"]
     return body
@@ -64,8 +62,12 @@ def update_rd_contact(email: str, data: dict):
         method="POST",
         headers={"Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(req) as resp:
-        return resp.status
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return resp.status
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", errors="replace")
+        raise Exception(f"RD API {e.code}: {detail}")
 
 
 class handler(BaseHTTPRequestHandler):
@@ -86,7 +88,6 @@ class handler(BaseHTTPRequestHandler):
 
             phone_raw, phone_field = pick_phone(contact)
 
-            # Nome vem no campo "name"; sobrenome em custom_fields["Sobrenome"]
             first_name = contact.get("name") or ""
             custom_fields = contact.get("custom_fields") or {}
             last_name = (

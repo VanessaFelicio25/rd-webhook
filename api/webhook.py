@@ -56,15 +56,13 @@ def extract_contact(body) -> dict:
 
 
 def update_rd_contact(email: str, data: dict):
-    url = f"https://api.rd.services/platform/contacts/email:{email}"
+    url = f"https://app.rdstation.com.br/api/1.3/leads?auth_token={RD_TOKEN}"
+    body = {"lead": {"email": email, **data}}
     req = urllib.request.Request(
         url,
-        data=json.dumps(data).encode(),
-        method="PATCH",
-        headers={
-            "Authorization": f"Bearer {RD_TOKEN}",
-            "Content-Type": "application/json",
-        },
+        data=json.dumps(body).encode(),
+        method="POST",
+        headers={"Content-Type": "application/json"},
     )
     with urllib.request.urlopen(req) as resp:
         return resp.status
